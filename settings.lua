@@ -1,26 +1,12 @@
 
 data:extend{
   {
-    type = "bool-setting",
-    name = "ltn-opts-remove-temporary-stops",
+    type = "string-setting",
+    name = "ltn-temp-stop-mode",
     order = "aa",
     setting_type = "runtime-global",
-    default_value = false,
-  },
-  {
-    type = "bool-setting",
-    name = "ltn-opts-remove-temporary-directions",
-    order = "ab",
-    setting_type = "runtime-global",
-    minimum_value = 0,
-    default_value = false,
-  },
-  {
-    type = "bool-setting",
-    name = "ltn-opts-remove-temporary-directions-smart",
-    order = "ac",
-    setting_type = "runtime-global",
-    default_value = true,
+    default_value = "remove-direction-smart",
+    allowed_values = {"nochange","remove-all","remove-direction-all","remove-direction-smart"}
   },
   {
     type = "bool-setting",

@@ -11,18 +11,19 @@
 
 util = require("util")
 
-local remove_temporary_stops = settings.global["ltn-remove-temporary-stops"]
-local remove_temporary_directions = settings.global["ltn-remove-temporary-directions"
-local remove_temporary_directions_smart = settings.global["ltn-remove-temporary-directions-smart"]
-local debug_print = settings.global["ltn-opts-debug-print"]
+local remove_temporary_stops = false
+local remove_temporary_directions = false
+local remove_temporary_directions_smart = false
+local debug_print = false
+local mode = "oops"
 
-local function ReloadSettings(event)
-
-  remove_temporary_stops = settings.global["ltn-remove-temporary-stops"]
-  remove_temporary_directions = settings.global["ltn-remove-temporary-directions"
-  remove_temporary_directions_smart = settings.global["ltn-remove-temporary-directions-smart"]
-  debug_print = settings.global["ltn-opts-debug-print"]
-
+local function ReloadSettings()
+  mode = settings.global["ltn-temp-stop-mode"].value
+  remove_temporary_stops = mode == "remove-all"
+  remove_temporary_directions = mode == "remove-direction-all"
+  remove_temporary_directions_smart = mode == "remove-direction-smart"
+  debug_print = settings.global["ltn-opts-debug-print"].value
+  
 end
 
 local function ProcessSchedule(schedule)
@@ -39,7 +40,7 @@ local function ProcessSchedule(schedule)
           if debug_print then
             game.print("Removing temporary stop at rail ("..tostring(rail.position.x)..","..tostring(rail.position.y)..")")
           end
-          table.remove(schedule.records[i])
+          table.remove(schedule.records,i)
           changed = true
         end
       end
@@ -70,7 +71,9 @@ local function ProcessSchedule(schedule)
               if debug_print then
                 game.print("Found "..#stops.." stops near rail at ("..tostring(rail.position.x)..","..tostring(rail.position.y)..")")
               end
-              if #stops == 2 and stops[1].backer_name == station and stops[2].backer_name == station then
+              if #stops == 2 and 
+                stops[1].backer_name == station and stops[2].backer_name == station and 
+                stops[1].connected_rail == rail and stops[2].connected_rail == rail then
                 if debug_print then
                   game.print("Smart removing direction of temporary stop at station "..station)
                 end
@@ -99,9 +102,9 @@ function OnDispatcherUpdated(event)
     local last_tick = global.lastDispatchTick
     for train_id,delivery in pairs(event.deliveries) do
       if delivery.started >= last_tick then
-        local schedule = ProcessTrainSchedule(delivery.train)
+        local schedule = ProcessSchedule(delivery.train.schedule)
         if schedule then
-          event.train.schedule = schedule
+          delivery.train.schedule = schedule
         end
       end
     end
@@ -118,14 +121,19 @@ local function registerEvents()
   script.on_event(remote.call("logistic-train-network", "on_dispatcher_updated"), OnDispatcherUpdated)
 end
 
-script.on_event(defines.events.on_runtime_mod_setting_changed, ReloadSettings)
+script.on_event(defines.events.on_runtime_mod_setting_changed, function()
+  ReloadSettings()
+end)
 
 script.on_load(function()
+  ReloadSettings()
   registerEvents()
+  
 end)
 
 script.on_init(function()
   initGlobals()
+  ReloadSettings()
   registerEvents()
 end)
 
